@@ -70,7 +70,15 @@ const dummyDataPool = {
   "cities": ["ירושלים", "בני ברק"], 
   "list_of_subjects_for_lesson": [ "מתמטיקה"], 
   "list_of_cities": ["ירושלים", "בני ברק"],
-  
+  "reporter_name": "יוסי כהן",
+  "article_title": "עלייה במחירי הדיור בירושלים: דירות חדשות מגיעות לשיא חדש",
+  "article_content": "בירושלים נרשמה השבוע עלייה נוספת במחירי הדיור, כאשר דירות חדשות במרכז העיר מוצעות למכירה במחירים של מעל 6 מיליון שקל. לפי נתוני משרד השיכון, מחירי הדיור עלו ב-8 אחוזים בחודש האחרון בלבד. ראש העיר הודיע על תוכנית חדשה להקמת 2,000 יחידות דיור חדשות באזור גבעת שאול, במטרה להקל על המשבר. הודעה זו התקבלה בברכה על ידי תושבי העיר, אך מומחי נדלן מעריכים שיידרשו מספר שנים עד שהפרויקט ישפיע על המחירים.",
+  "article_tags": ["כלכלה", "כללי"],
+  "content_quality_score": 8,
+  "is_appropriate_for_haredi_audience": true,
+  "is_news_content": true,
+  "rejection_reason": ""
+
 };
 
 // Calculate gmach_data separately after dummyDataPool is fully initialized
@@ -155,4 +163,5 @@ app.get('/action/:action', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  console.log(`url: http://localhost:${port}/api/analysis?dataNames=${Object.keys(dummyDataPool).join(',')}`);
 });
