@@ -105,13 +105,17 @@ const calculateDelay = (data) => {
 };
 
 // Endpoint to get multiple data fields based on query parameters
-app.get('/api/analysis', (req, res) => {
+app.get('/api/analysis', async (req, res) => {
+  const startTime = Date.now();
   const { dataNames } = req.query;
+  
+  console.log(`[${new Date().toISOString()}] API Request received for: ${dataNames}`);
   
   let customValues = {};
   if (req.query.customValues) {
     try {
       customValues = JSON.parse(decodeURIComponent(req.query.customValues));
+      console.log(`Custom values provided:`, customValues);
     } catch (error) {
       console.error("Error parsing customValues:", error.message);
       return res.status(400).json({ error: "Invalid customValues format. Must be a URL-encoded JSON object." });
@@ -135,11 +139,25 @@ app.get('/api/analysis', (req, res) => {
     }
   });
 
-  res.json({
+  // Calculate delay based on data size to simulate real server processing
+  const responseData = {
     "analysis_response": {
       "required_data": resultData
     }
-  });
+  };
+  
+  const delayMs = calculateDelay(responseData);
+  const dataSizeBytes = Buffer.byteLength(JSON.stringify(responseData), 'utf8');
+  
+  console.log(`Processing ${keysArray.length} fields, response size: ${dataSizeBytes} bytes`);
+  console.log(`Simulating server processing delay: ${delayMs}ms`);
+  
+  // Add artificial delay to simulate real server processing
+  setTimeout(() => {
+    const totalTime = Date.now() - startTime;
+    console.log(`[${new Date().toISOString()}] Response sent after ${totalTime}ms (${delayMs}ms simulated + ${totalTime - delayMs}ms actual processing)`);
+    res.json(responseData);
+  }, delayMs);
 });
 
 // New endpoint to view tables in a user-friendly format
