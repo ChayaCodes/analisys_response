@@ -218,6 +218,7 @@ app.get('/api/analysis', async (req, res) => {
   };
   
   // Add file_url if provided
+  console.log(`Using file_url from query: ${req.query}`);
   if (req.query.file_url) {
     responseData.analysis_response.file_url = req.query.file_url;
   }else{
@@ -323,6 +324,8 @@ async function processRequestInBackground(call_id, dataNames, queryParams) {
     // Add file_url if provided
     if (queryParams.file_url) {
       responseData.analysis_response.file_url = queryParams.file_url;
+    }else{
+      responseData.analysis_response.file_url = dummyDataPool.gmach_data.file_url || "https://example.com/default_file_url.wav";
     }
     
     // Add user_content if provided
