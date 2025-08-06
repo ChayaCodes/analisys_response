@@ -1,5 +1,5 @@
-const express = require('express');
-const axios = require('axios');
+import express from 'express';
+import axios from 'axios';
 const app = express();
 const port = 5864;
 
@@ -70,6 +70,24 @@ const dummyDataPool = {
     "full_gmach_services": "השאלת עריסות גם לתקופות ארוכות",
     "gmach_name": "גמח עריסות"
   },
+  /* Hand2 categories */
+  "Does_the_object_fit_the_category_Books_and_Media": "false",
+  "Does_the_object_fit_the_category_Business_and_Office": "false",
+  "Does_the_object_fit_the_category_Children_and_Babies": "true",
+  "Does_the_object_fit_the_category_Clothing_and_Footwear": "false",
+  "Does_the_object_fit_the_category_Collectibles_and_Art": "false",
+  "Does_the_object_fit_the_category_Electronics": "false",
+  "Does_the_object_fit_the_category_Furniture": "true", // Renamed to remove question mark
+  "Does_the_object_fit_the_category_General": "false",
+  "Does_the_object_fit_the_category_Home_and_Garden": "false",
+  "Does_the_object_fit_the_category_Pets": "false",
+  "Does_the_object_fit_the_category_Sports_and_Leisure": "false",
+  "Does_the_object_fit_the_category_Transportation": "false",
+  "city_or_neighborhood": "ירושלים - גבעת שאול",
+  "object_name": "עריסת תינוק במצב מצוין",
+  "username": "חיה קרמר",
+  "Description_of_the_unique_characteristics" : "עריסת תינוק במצב מצוין, מתאימה לתינוקות עד גיל שנה. כוללת מזרן נקי וכיסוי חדש.",
+  
   "city": "ירושלים",
   "neighborhood": "גבעת שאול",
   "street": "שדרות בן צבי",
@@ -80,14 +98,17 @@ const dummyDataPool = {
   
   /*news system*/
   "reporter_name": "חיים המלך",
+  "reporter_about": "כתב לענייני דיור וכלכלה, עם ניסיון של 10 שנים בתחום.",
   "article_title": "עלייה במחירי הדיור בירושלים: דירות חדשות מגיעות לשיא חדש",
   "article_content": "בירושלים נרשמה השבוע עלייה נוספת במחירי הדיור, כאשר דירות חדשות במרכז העיר מוצעות למכירה במחירים של מעל 6 מיליון שקל. לפי נתוני משרד השיכון, מחירי הדיור עלו ב-8 אחוזים בחודש האחרון בלבד. ראש העיר הודיע על תוכנית חדשה להקמת 2,000 יחידות דיור חדשות באזור גבעת שאול, במטרה להקל על המשבר. הודעה זו התקבלה בברכה על ידי תושבי העיר, אך מומחי נדלן מעריכים שיידרשו מספר שנים עד שהפרויקט ישפיע על המחירים.",
   "article_tags": ["העולם החרדי",  "כלכלה"],
   "content_quality_score": 8,
   "is_appropriate_for_haredi_audience": true,
   "is_news_content": true,
-  "rejection_reason": ""
+  "rejection_reason": "", 
+  "file_url": "http://server.hazran.online/audio/free_arena_voice_files/108002/1fd9f8d2-5fbe-45c5-8e95-658cfb478371.wav",
 
+  
 };
 
 // Calculate gmach_data separately after dummyDataPool is fully initialized
@@ -95,6 +116,9 @@ dummyDataPool.gmach_data = {
   ...dummyDataPool.gmach_register,
   ...dummyDataPool.location
 };
+
+// NOTE: The field "Does_the_object_fit_the_category_Furniture?" was renamed to 
+// "Does_the_object_fit_the_category_Furniture" (without question mark) to prevent URL encoding issues
 
 // Utility function to calculate delay based on data size
 const calculateDelay = (data) => {
@@ -104,13 +128,60 @@ const calculateDelay = (data) => {
   return Math.ceil(sizeInBytes * 10);
 };
 
+// Storage for async processing
+const asyncProcessing = new Map(); // call_id -> { status, result, startTime }
+
+// Cleanup old completed requests (older than 5 minutes)
+setInterval(() => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  for (const [callId, data] of asyncProcessing.entries()) {
+    if (data.status === 'completed' && data.startTime < fiveMinutesAgo) {
+      asyncProcessing.delete(callId);
+      console.log(`Cleaned up completed request: ${callId}`);
+    }
+  }
+}, 60000); // Run cleanup every minute
+
 // Endpoint to get multiple data fields based on query parameters
 app.get('/api/analysis', async (req, res) => {
   const startTime = Date.now();
-  const { dataNames } = req.query;
+  const { dataNames, call_id } = req.query;
   
-  console.log(`[${new Date().toISOString()}] API Request received for: ${dataNames}`);
+  console.log(`[${new Date().toISOString()}] API Request received for: ${dataNames}${call_id ? ` with call_id: ${call_id}` : ''}`);
   
+  // Handle async processing with call_id
+  if (call_id) {
+    // Check if this call_id is already being processed or completed
+    if (asyncProcessing.has(call_id)) {
+      const processData = asyncProcessing.get(call_id);
+      
+      if (processData.status === 'processing') {
+        console.log(`Request ${call_id} is still processing...`);
+        return res.json(null);
+      } else if (processData.status === 'completed') {
+        console.log(`Request ${call_id} completed, returning result`);
+        return res.json(processData.result);
+      }
+    }
+    
+    // First time seeing this call_id - start async processing
+    asyncProcessing.set(call_id, {
+      status: 'processing',
+      result: null,
+      startTime: Date.now()
+    });
+    
+    console.log(`Starting async processing for call_id: ${call_id}`);
+    
+    // Return immediate None response
+    res.json(null);
+    
+    // Start background processing
+    processRequestInBackground(call_id, dataNames, req.query);
+    return;
+  }
+  
+  // Original synchronous processing (without call_id)
   let customValues = {};
   if (req.query.customValues) {
     try {
@@ -138,13 +209,25 @@ app.get('/api/analysis', async (req, res) => {
       resultData[key] = dummyDataPool[key];
     }
   });
-
-  // Calculate delay based on data size to simulate real server processing
+  
+  // Check if file_url is provided in customValues
   const responseData = {
     "analysis_response": {
       "required_data": resultData
     }
   };
+  
+  // Add file_url if provided
+  if (req.query.file_url) {
+    responseData.analysis_response.file_url = req.query.file_url;
+  }else{
+    responseData.analysis_response.file_url = dummyDataPool.gmach_data.file_url || "https://example.com/default_file_url.wav";
+  }
+  
+  // Add user_content if provided
+  if (req.query.user_content) {
+    responseData.analysis_response.user_content = req.query.user_content;
+  }
   
   const delayMs = calculateDelay(responseData);
   const dataSizeBytes = Buffer.byteLength(JSON.stringify(responseData), 'utf8');
@@ -159,6 +242,119 @@ app.get('/api/analysis', async (req, res) => {
     res.json(responseData);
   }, delayMs);
 });
+
+// Background processing function
+async function processRequestInBackground(call_id, dataNames, queryParams) {
+  try {
+    console.log(`[${new Date().toISOString()}] Background processing started for ${call_id}`);
+    
+    // Special handling for hand2 fields - define default values
+    const hand2DefaultValues = {
+      "Does_the_object_fit_the_category_Books_and_Media": "false",
+      "Does_the_object_fit_the_category_Business_and_Office": "false",
+      "Does_the_object_fit_the_category_Children_and_Babies": "true",
+      "Does_the_object_fit_the_category_Clothing_and_Footwear": "false",
+      "Does_the_object_fit_the_category_Collectibles_and_Art": "false",
+      "Does_the_object_fit_the_category_Electronics": "false",
+      "Does_the_object_fit_the_category_Furniture": "true", // Renamed to remove question mark
+      "Does_the_object_fit_the_category_General": "false",
+      "Does_the_object_fit_the_category_Home_and_Garden": "false",
+      "Does_the_object_fit_the_category_Pets": "false",
+      "Does_the_object_fit_the_category_Sports_and_Leisure": "false",
+      "Does_the_object_fit_the_category_Transportation": "false",
+      "city_or_neighborhood": "ירושלים - גבעת שאול",
+      "object_name": "עריסת תינוק במצב מצוין"
+    };
+
+    // Debug: Print available fields in dummyDataPool
+    console.log(`Available fields in dummyDataPool: ${Object.keys(dummyDataPool).join(', ')}`);
+    
+    let customValues = {};
+    if (queryParams.customValues) {
+      try {
+        customValues = JSON.parse(decodeURIComponent(queryParams.customValues));
+        console.log(`Custom values parsed:`, customValues);
+      } catch (error) {
+        console.error(`Error parsing customValues for ${call_id}:`, error.message);
+      }
+    }
+    
+    if (!dataNames) {
+      asyncProcessing.set(call_id, {
+        status: 'completed',
+        result: { error: "Please provide dataNames query parameter" },
+        startTime: asyncProcessing.get(call_id).startTime
+      });
+      return;
+    }
+
+    const keysArray = dataNames.split(',');
+    console.log(`Requested fields: ${keysArray.join(', ')}`);
+    
+    let resultData = {};
+
+    // Check if this is a hand2 request by examining dataNames
+    const isHand2Request = dataNames.includes('Does_the_object_fit_the_category_');
+    console.log(`Is hand2 request: ${isHand2Request}`);
+
+    keysArray.forEach((key) => {
+      if (customValues[key]) {
+        console.log(`Using custom value for ${key}: ${customValues[key]}`);
+        resultData[key] = customValues[key];
+      } else if (dummyDataPool.hasOwnProperty(key)) {
+        console.log(`Using dummyDataPool value for ${key}: ${dummyDataPool[key]}`);
+        resultData[key] = dummyDataPool[key];
+      } else if (hand2DefaultValues.hasOwnProperty(key)) {
+        console.log(`Using hand2DefaultValues for ${key}: ${hand2DefaultValues[key]}`);
+        resultData[key] = hand2DefaultValues[key];
+      } else {
+        console.log(`No value found for ${key}`);
+      }
+    });
+
+    const responseData = {
+      "analysis_response": {
+        "required_data": resultData,
+        "call_id": call_id,
+        "processed_at": new Date().toISOString()
+      }
+    };
+    
+    // Add file_url if provided
+    if (queryParams.file_url) {
+      responseData.analysis_response.file_url = queryParams.file_url;
+    }
+    
+    // Add user_content if provided
+    if (queryParams.user_content) {
+      responseData.analysis_response.user_content = queryParams.user_content;
+    }
+    
+    const delayMs = calculateDelay(responseData);
+    const dataSizeBytes = Buffer.byteLength(JSON.stringify(responseData), 'utf8');
+    
+    console.log(`Background processing for ${call_id}: ${keysArray.length} fields, ${dataSizeBytes} bytes, ${delayMs}ms delay`);
+    
+    // Simulate processing delay
+    setTimeout(() => {
+      asyncProcessing.set(call_id, {
+        status: 'completed',
+        result: responseData,
+        startTime: asyncProcessing.get(call_id).startTime
+      });
+      
+      console.log(`[${new Date().toISOString()}] Background processing completed for ${call_id}`);
+    }, delayMs);
+    
+  } catch (error) {
+    console.error(`Error in background processing for ${call_id}:`, error);
+    asyncProcessing.set(call_id, {
+      status: 'completed',
+      result: { error: "Internal processing error" },
+      startTime: asyncProcessing.get(call_id).startTime
+    });
+  }
+}
 
 // New endpoint to view tables in a user-friendly format
 app.get('/tables', async (req, res) => {
@@ -766,14 +962,48 @@ app.get('/action/:action', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  console.log(`Standard URL: http://localhost:${port}/api/analysis?dataNames=${Object.keys(dummyDataPool).join(',')}`);
   
-  // Create properly encoded example URL
-  const exampleCustomValues = JSON.stringify({"reporter_name":"שם אחר"});
+  // Standard synchronous URL
+  console.log(`\n=== Standard Synchronous Request ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?dataNames=${Object.keys(dummyDataPool).join(',')}`);
+  
+  // Asynchronous URL with unique call_id examples
+  console.log(`\n=== Asynchronous Request with call_id ===`);
+  console.log(`First request (returns null): http://localhost:${port}/api/analysis?call_id=test-123-456&dataNames=reporter_name,article_title`);
+  console.log(`Subsequent requests (returns result when ready): http://localhost:${port}/api/analysis?call_id=test-123-456`);
+  console.log(`Note: Generate a unique call_id for each new request series (UUID recommended)`);
+  
+  // Hand2 categories example
+  console.log(`\n=== Hand2 Categories Request Example ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?call_id=hand2-request-123&dataNames=Does_the_object_fit_the_category_Books_and_Media,Does_the_object_fit_the_category_Business_and_Office,Does_the_object_fit_the_category_Children_and_Babies,Does_the_object_fit_the_category_Clothing_and_Footwear,Does_the_object_fit_the_category_Collectibles_and_Art,Does_the_object_fit_the_category_Electronics,Does_the_object_fit_the_category_Furniture,Does_the_object_fit_the_category_General,Does_the_object_fit_the_category_Home_and_Garden,Does_the_object_fit_the_category_Pets,Does_the_object_fit_the_category_Sports_and_Leisure,Does_the_object_fit_the_category_Transportation,city_or_neighborhood,object_name`);
+  
+  // Create properly encoded example URL with custom values
+  const exampleCustomValues = JSON.stringify({"reporter_name":"שם אחר", "article_title":"כותרת מותאמת אישית"});
   const encodedCustomValues = encodeURIComponent(exampleCustomValues);
-  console.log(`Custom values example: http://localhost:${port}/api/analysis?dataNames=reporter_name&customValues=${encodedCustomValues}`);
+  console.log(`\n=== Custom Values Example ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?dataNames=reporter_name,article_title&customValues=${encodedCustomValues}`);
+  
+  // Hand2 custom values example
+  const hand2CustomValues = JSON.stringify({
+    "Does_the_object_fit_the_category_Books_and_Media": "false",
+    "Does_the_object_fit_the_category_Business_and_Office": "false",
+    "Does_the_object_fit_the_category_Electronics": "true",
+    "object_name": "מחשב נייד חדש - HP ProBook"
+  });
+  const encodedHand2Values = encodeURIComponent(hand2CustomValues);
+  console.log(`\n=== Hand2 Custom Values Example ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?call_id=hand2-laptop-123&dataNames=Does_the_object_fit_the_category_Books_and_Media,Does_the_object_fit_the_category_Business_and_Office,Does_the_object_fit_the_category_Electronics,object_name&customValues=${encodedHand2Values}`);
+  
+  // Async with custom values
+  console.log(`\n=== Asynchronous Request with Custom Values ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?call_id=test-custom-123&dataNames=reporter_name,article_title&customValues=${encodedCustomValues}`);
+  
+  // File URL example
+  console.log(`\n=== Request with File URL ===`);
+  console.log(`URL: http://localhost:${port}/api/analysis?dataNames=content_quality_score&file_url=http://example.com/file.wav`);
   
   // New table viewer endpoint
-  console.log(`\nTable viewer: http://localhost:${port}/tables`);
+  console.log(`\n=== Table Viewer ===`);
+  console.log(`URL: http://localhost:${port}/tables`);
   console.log('View database tables with search and filtering capabilities');
 });
