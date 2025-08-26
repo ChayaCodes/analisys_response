@@ -93,9 +93,12 @@ const dummyDataPool = {
   "street": "שדרות בן צבי",
   "name": "חיה קרמר",
   "cities": ["ירושלים", "בני ברק"], 
-  "list_of_subjects_for_lesson": [ "מתמטיקה"], 
-  "list_of_cities": ["ירושלים", "בני ברק"],
   
+  /*temporary position*/
+  "subject": "מתמטיקה",
+  "list_of_cities": ["ירושלים", "בני ברק"],
+  "list_of_subjects_for_lesson": [ "מתמטיקה"], 
+
   /*news system*/
   "reporter_name": "חיים המלך",
   "reporter_about": "כתב לענייני דיור וכלכלה, עם ניסיון של 10 שנים בתחום.",
@@ -716,18 +719,33 @@ app.get('/tables', async (req, res) => {
                     </tr>
                 </thead>
                 <tbody>
-                    ${call_data.map((row, index) => `
+                    ${call_data.map((row, index) => {
+                        // פונקציה לפורמט תאריך שניתן למיון
+                        const formatSortableDate = (timestamp) => {
+                            if (!timestamp) return '';
+                            const date = new Date(timestamp * 1000);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                            const seconds = String(date.getSeconds()).padStart(2, '0');
+                            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                        };
+                        
+                        return `
                         <tr>
                             <td>${index + 1}</td>
                             <td>${row.call_id || ''}</td>
-                            <td>${row.date ? new Date(row.date * 1000).toLocaleString('he-IL') : ''}</td>
+                            <td>${formatSortableDate(row.date)}</td>
                             <td>${row.id || ''}</td>
                             <td>${row.key || ''}</td>
                             <td>${row.local_id || ''}</td>
                             <td>${row.route_id || ''}</td>
                             <td>${row.value || ''}</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -815,18 +833,33 @@ app.get('/tables', async (req, res) => {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.map((row, index) => `
+                    ${data.map((row, index) => {
+                        // פונקציה לפורמט תאריך שניתן למיון
+                        const formatSortableDate = (timestamp) => {
+                            if (!timestamp) return '';
+                            const date = new Date(timestamp * 1000);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                            const seconds = String(date.getSeconds()).padStart(2, '0');
+                            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                        };
+                        
+                        return `
                         <tr>
                             <td>${index + 1}</td>
                             <td>${row.call_id || ''}</td>
-                            <td>${row.date ? new Date(row.date * 1000).toLocaleString('he-IL') : ''}</td>
+                            <td>${formatSortableDate(row.date)}</td>
                             <td>${row.id || ''}</td>
                             <td>${row.key || ''}</td>
                             <td>${row.local_id || ''}</td>
                             <td>${row.route_id || ''}</td>
                             <td>${row.value || ''}</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -992,18 +1025,32 @@ app.get('/tables', async (req, res) => {
                 const aText = a.cells[columnIndex].textContent.trim();
                 const bText = b.cells[columnIndex].textContent.trim();
                 
-                // Try to parse as numbers first
-                const aNum = parseFloat(aText);
-                const bNum = parseFloat(bText);
-                
                 let comparison = 0;
                 
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    // Numeric comparison
-                    comparison = aNum - bNum;
+                // Special handling for date column (column 2)
+                if (columnIndex === 2) {
+                    // Date comparison - format is YYYY-MM-DD HH:MM:SS
+                    const aDate = new Date(aText);
+                    const bDate = new Date(bText);
+                    
+                    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+                        comparison = aDate.getTime() - bDate.getTime();
+                    } else {
+                        // Fallback to string comparison if date parsing fails
+                        comparison = aText.localeCompare(bText, 'he');
+                    }
                 } else {
-                    // String comparison
-                    comparison = aText.localeCompare(bText, 'he');
+                    // Try to parse as numbers first for other columns
+                    const aNum = parseFloat(aText);
+                    const bNum = parseFloat(bText);
+                    
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        // Numeric comparison
+                        comparison = aNum - bNum;
+                    } else {
+                        // String comparison
+                        comparison = aText.localeCompare(bText, 'he');
+                    }
                 }
                 
                 return direction === 'asc' ? comparison : -comparison;
