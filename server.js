@@ -516,6 +516,77 @@ app.get('/tables', async (req, res) => {
         .clear-filters-btn:hover {
             background: #c0392b;
         }
+        
+        /* סגנונות לפאנלים המתקדמים */
+        .advanced-filters {
+            margin: 10px 0;
+        }
+        .toggle-advanced-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .toggle-advanced-btn:hover {
+            background: #2980b9;
+        }
+        .advanced-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .advanced-panel.hidden {
+            display: none;
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-row label {
+            min-width: 120px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .filter-row input, .filter-row select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .filter-row button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .filter-row button:hover {
+            background: #219a52;
+        }
+        .clear-all-btn {
+            background: #e74c3c !important;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .clear-all-btn:hover {
+            background: #c0392b !important;
+        }
+        
         .sortable {
             cursor: pointer;
             position: relative;
@@ -566,6 +637,52 @@ app.get('/tables', async (req, res) => {
             </div>
             <input type="text" class="search-box" placeholder="חיפוש כללי בטבלה..." 
                    onkeyup="filterTable('call_data_table', this.value)">
+            
+            <!-- פאנל סינונים מתקדמים -->
+            <div class="advanced-filters">
+                <button class="toggle-advanced-btn" onclick="toggleAdvancedFilters('call_data')">
+                    📊 סינונים מתקדמים
+                </button>
+                <div id="call_data_advanced_panel" class="advanced-panel hidden">
+                    <div class="filter-row">
+                        <label>סינון לפי תאריך:</label>
+                        <input type="date" id="call_data_date_from" placeholder="מתאריך">
+                        <input type="date" id="call_data_date_to" placeholder="עד תאריך">
+                        <button onclick="applyDateFilter('call_data_table', 'call_data_date_from', 'call_data_date_to', 2)">
+                            החל סינון תאריך
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <label>סינון מרובה (OR):</label>
+                        <select id="call_data_multi_column">
+                            <option value="1">Call ID</option>
+                            <option value="3">ID</option>
+                            <option value="4">מפתח</option>
+                            <option value="5">Local ID</option>
+                            <option value="6">Route ID</option>
+                            <option value="7">ערך</option>
+                        </select>
+                        <input type="text" id="call_data_multi_values" placeholder="ערכים מופרדים בפסיק">
+                        <button onclick="applyMultiValueFilter('call_data_table')">
+                            החל סינון מרובה
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <label>סינון לפי טווח שורות:</label>
+                        <input type="number" id="call_data_row_from" placeholder="משורה" min="1">
+                        <input type="number" id="call_data_row_to" placeholder="עד שורה" min="1">
+                        <button onclick="applyRowRangeFilter('call_data_table')">
+                            החל סינון שורות
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <button class="clear-all-btn" onclick="clearAllAdvancedFilters('call_data_table')">
+                            🗑️ נקה את כל הסינונים המתקדמים
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <button class="reset-sort-btn" onclick="resetSort('call_data_table')">
                 איפוס מיון
             </button>
@@ -578,27 +695,30 @@ app.get('/tables', async (req, res) => {
             <table id="call_data_table">
                 <thead>
                     <tr>
-                        <th class="sortable" onclick="sortTable('call_data_table', 0)">Call ID</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 1)">תאריך</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 2)">ID</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 3)">מפתח</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 4)">Local ID</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 5)">Route ID</th>
-                        <th class="sortable" onclick="sortTable('call_data_table', 6)">ערך</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 0)">#</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 1)">Call ID</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 2)">תאריך</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 3)">ID</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 4)">מפתח</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 5)">Local ID</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 6)">Route ID</th>
+                        <th class="sortable" onclick="sortTable('call_data_table', 7)">ערך</th>
                     </tr>
                     <tr class="filter-header">
-                        <th><input type="text" class="column-filter" placeholder="סנן Call ID..." onkeyup="filterByColumn('call_data_table', 0, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן תאריך..." onkeyup="filterByColumn('call_data_table', 1, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן ID..." onkeyup="filterByColumn('call_data_table', 2, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן מפתח..." onkeyup="filterByColumn('call_data_table', 3, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן Local ID..." onkeyup="filterByColumn('call_data_table', 4, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן Route ID..." onkeyup="filterByColumn('call_data_table', 5, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן ערך..." onkeyup="filterByColumn('call_data_table', 6, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן #..." onkeyup="filterByColumn('call_data_table', 0, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Call ID..." onkeyup="filterByColumn('call_data_table', 1, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן תאריך..." onkeyup="filterByColumn('call_data_table', 2, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן ID..." onkeyup="filterByColumn('call_data_table', 3, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן מפתח..." onkeyup="filterByColumn('call_data_table', 4, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Local ID..." onkeyup="filterByColumn('call_data_table', 5, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Route ID..." onkeyup="filterByColumn('call_data_table', 6, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן ערך..." onkeyup="filterByColumn('call_data_table', 7, this.value)"></th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${call_data.map(row => `
+                    ${call_data.map((row, index) => `
                         <tr>
+                            <td>${index + 1}</td>
                             <td>${row.call_id || ''}</td>
                             <td>${row.date ? new Date(row.date * 1000).toLocaleString('he-IL') : ''}</td>
                             <td>${row.id || ''}</td>
@@ -619,6 +739,49 @@ app.get('/tables', async (req, res) => {
             </div>
             <input type="text" class="search-box" placeholder="חיפוש כללי בטבלה..." 
                    onkeyup="filterTable('data_table', this.value)">
+            
+            <!-- פאנל סינונים מתקדמים -->
+            <div class="advanced-filters">
+                <button class="toggle-advanced-btn" onclick="toggleAdvancedFilters('data')">
+                    📊 סינונים מתקדמים
+                </button>
+                <div id="data_advanced_panel" class="advanced-panel hidden">
+                    <div class="filter-row">
+                        <label>סינון לפי תאריך:</label>
+                        <input type="date" id="data_date_from" placeholder="מתאריך">
+                        <input type="date" id="data_date_to" placeholder="עד תאריך">
+                        <button onclick="applyDateFilter('data_table', 'data_date_from', 'data_date_to', 2)">
+                            החל סינון תאריך
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <label>סינון מרובה (OR):</label>
+                        <select id="data_multi_column">
+                            <option value="1">ID</option>
+                            <option value="3">מפתח</option>
+                            <option value="4">ערך</option>
+                        </select>
+                        <input type="text" id="data_multi_values" placeholder="ערכים מופרדים בפסיק">
+                        <button onclick="applyMultiValueFilter('data_table')">
+                            החל סינון מרובה
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <label>סינון לפי טווח שורות:</label>
+                        <input type="number" id="data_row_from" placeholder="משורה" min="1">
+                        <input type="number" id="data_row_to" placeholder="עד שורה" min="1">
+                        <button onclick="applyRowRangeFilter('data_table')">
+                            החל סינון שורות
+                        </button>
+                    </div>
+                    <div class="filter-row">
+                        <button class="clear-all-btn" onclick="clearAllAdvancedFilters('data_table')">
+                            🗑️ נקה את כל הסינונים המתקדמים
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <button class="reset-sort-btn" onclick="resetSort('data_table')">
                 איפוס מיון
             </button>
@@ -631,27 +794,30 @@ app.get('/tables', async (req, res) => {
             <table id="data_table">
                 <thead>
                     <tr>
-                        <th class="sortable" onclick="sortTable('data_table', 0)">Call ID</th>
-                        <th class="sortable" onclick="sortTable('data_table', 1)">תאריך</th>
-                        <th class="sortable" onclick="sortTable('data_table', 2)">ID</th>
-                        <th class="sortable" onclick="sortTable('data_table', 3)">מפתח</th>
-                        <th class="sortable" onclick="sortTable('data_table', 4)">Local ID</th>
-                        <th class="sortable" onclick="sortTable('data_table', 5)">Route ID</th>
-                        <th class="sortable" onclick="sortTable('data_table', 6)">ערך</th>
+                        <th class="sortable" onclick="sortTable('data_table', 0)">#</th>
+                        <th class="sortable" onclick="sortTable('data_table', 1)">Call ID</th>
+                        <th class="sortable" onclick="sortTable('data_table', 2)">תאריך</th>
+                        <th class="sortable" onclick="sortTable('data_table', 3)">ID</th>
+                        <th class="sortable" onclick="sortTable('data_table', 4)">מפתח</th>
+                        <th class="sortable" onclick="sortTable('data_table', 5)">Local ID</th>
+                        <th class="sortable" onclick="sortTable('data_table', 6)">Route ID</th>
+                        <th class="sortable" onclick="sortTable('data_table', 7)">ערך</th>
                     </tr>
                     <tr class="filter-header">
-                        <th><input type="text" class="column-filter" placeholder="סנן Call ID..." onkeyup="filterByColumn('data_table', 0, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן תאריך..." onkeyup="filterByColumn('data_table', 1, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן ID..." onkeyup="filterByColumn('data_table', 2, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן מפתח..." onkeyup="filterByColumn('data_table', 3, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן Local ID..." onkeyup="filterByColumn('data_table', 4, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן Route ID..." onkeyup="filterByColumn('data_table', 5, this.value)"></th>
-                        <th><input type="text" class="column-filter" placeholder="סנן ערך..." onkeyup="filterByColumn('data_table', 6, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן #..." onkeyup="filterByColumn('data_table', 0, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Call ID..." onkeyup="filterByColumn('data_table', 1, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן תאריך..." onkeyup="filterByColumn('data_table', 2, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן ID..." onkeyup="filterByColumn('data_table', 3, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן מפתח..." onkeyup="filterByColumn('data_table', 4, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Local ID..." onkeyup="filterByColumn('data_table', 5, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן Route ID..." onkeyup="filterByColumn('data_table', 6, this.value)"></th>
+                        <th><input type="text" class="column-filter" placeholder="סנן ערך..." onkeyup="filterByColumn('data_table', 7, this.value)"></th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.map(row => `
+                    ${data.map((row, index) => `
                         <tr>
+                            <td>${index + 1}</td>
                             <td>${row.call_id || ''}</td>
                             <td>${row.date ? new Date(row.date * 1000).toLocaleString('he-IL') : ''}</td>
                             <td>${row.id || ''}</td>
@@ -900,6 +1066,160 @@ app.get('/tables', async (req, res) => {
             
             // Reload the page to restore original order
             location.reload();
+        }
+        
+        // פונקציות לפאנלים המתקדמים
+        function toggleAdvancedFilters(tablePrefix) {
+            const panel = document.getElementById(tablePrefix + '_advanced_panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function applyDateFilter(tableId, fromDateId, toDateId, dateColumnIndex) {
+            const table = document.getElementById(tableId);
+            const fromDate = document.getElementById(fromDateId).value;
+            const toDate = document.getElementById(toDateId).value;
+            
+            if (!fromDate && !toDate) {
+                alert('אנא בחר לפחות תאריך אחד');
+                return;
+            }
+            
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            rows.forEach(row => {
+                if (row.style.display === 'none') return; // Skip already hidden rows
+                
+                const dateCell = row.cells[dateColumnIndex];
+                if (!dateCell) return;
+                
+                const cellText = dateCell.textContent.trim();
+                if (!cellText) return;
+                
+                // Parse Hebrew date format (dd/mm/yyyy hh:mm:ss)
+                const dateParts = cellText.split(' ')[0].split('/');
+                if (dateParts.length !== 3) return;
+                
+                const cellDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+                const fromDateObj = fromDate ? new Date(fromDate) : null;
+                const toDateObj = toDate ? new Date(toDate) : null;
+                
+                let showRow = true;
+                if (fromDateObj && cellDate < fromDateObj) showRow = false;
+                if (toDateObj && cellDate > toDateObj) showRow = false;
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+            
+            updateStatsAdvanced(tableId);
+        }
+
+        function applyMultiValueFilter(tableId) {
+            const tablePrefix = tableId.replace('_table', '');
+            const columnSelect = document.getElementById(tablePrefix + '_multi_column');
+            const valuesInput = document.getElementById(tablePrefix + '_multi_values');
+            
+            const columnIndex = parseInt(columnSelect.value);
+            const values = valuesInput.value.split(',').map(v => v.trim()).filter(v => v);
+            
+            if (values.length === 0) {
+                alert('אנא הכנס ערכים לסינון');
+                return;
+            }
+            
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            rows.forEach(row => {
+                if (row.style.display === 'none') return; // Skip already hidden rows
+                
+                const cell = row.cells[columnIndex];
+                if (!cell) return;
+                
+                const cellText = cell.textContent.trim().toLowerCase();
+                const matchesAny = values.some(value => 
+                    cellText.includes(value.toLowerCase())
+                );
+                
+                if (!matchesAny) {
+                    row.style.display = 'none';
+                }
+            });
+            
+            updateStatsAdvanced(tableId);
+        }
+
+        function applyRowRangeFilter(tableId) {
+            const tablePrefix = tableId.replace('_table', '');
+            const fromInput = document.getElementById(tablePrefix + '_row_from');
+            const toInput = document.getElementById(tablePrefix + '_row_to');
+            
+            const fromRow = parseInt(fromInput.value) || 1;
+            const toRow = parseInt(toInput.value) || Number.MAX_SAFE_INTEGER;
+            
+            if (fromRow > toRow) {
+                alert('מספר השורה ההתחלתי חייב להיות קטן או שווה למספר השורה הסופי');
+                return;
+            }
+            
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            rows.forEach((row, index) => {
+                const rowNumber = index + 1;
+                if (rowNumber < fromRow || rowNumber > toRow) {
+                    row.style.display = 'none';
+                }
+            });
+            
+            updateStatsAdvanced(tableId);
+        }
+
+        function clearAllAdvancedFilters(tableId) {
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            // Show all rows
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+            
+            // Clear all advanced filter inputs
+            const tablePrefix = tableId.replace('_table', '');
+            
+            // Clear date inputs
+            const fromDateInput = document.getElementById(tablePrefix + '_date_from');
+            const toDateInput = document.getElementById(tablePrefix + '_date_to');
+            if (fromDateInput) fromDateInput.value = '';
+            if (toDateInput) toDateInput.value = '';
+            
+            // Clear multi-value inputs
+            const multiValuesInput = document.getElementById(tablePrefix + '_multi_values');
+            if (multiValuesInput) multiValuesInput.value = '';
+            
+            // Clear row range inputs
+            const rowFromInput = document.getElementById(tablePrefix + '_row_from');
+            const rowToInput = document.getElementById(tablePrefix + '_row_to');
+            if (rowFromInput) rowFromInput.value = '';
+            if (rowToInput) rowToInput.value = '';
+            
+            updateStatsAdvanced(tableId);
+        }
+
+        function updateStatsAdvanced(tableId) {
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const allRows = tbody.getElementsByTagName('tr');
+            const visibleRows = Array.from(allRows).filter(row => row.style.display !== 'none');
+            
+            const statsId = tableId.replace('_table', '_stats');
+            const statsElement = document.getElementById(statsId);
+            if (statsElement) {
+                statsElement.textContent = 'מציג ' + visibleRows.length + ' מתוך ' + allRows.length + ' רשומות';
+            }
         }
     </script>
 </body>
