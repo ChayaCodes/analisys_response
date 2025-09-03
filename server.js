@@ -228,9 +228,13 @@ app.get('/api/analysis', async (req, res) => {
     responseData.analysis_response.file_url = dummyDataPool.gmach_data.file_url || "https://example.com/default_file_url.wav";
   }
   
-  // Add user_content if provided
+  // Add user_content - always include all data from resultData concatenated
   if (req.query.user_content) {
     responseData.analysis_response.user_content = req.query.user_content;
+  } else {
+    // משרשר את כל הנתונים מתוך resultData
+    const allValues = Object.values(resultData).filter(value => value !== null && value !== undefined && value !== '');
+    responseData.analysis_response.user_content = allValues.join(' ');
   }
   
   const delayMs = calculateDelay(responseData);
@@ -331,9 +335,13 @@ async function processRequestInBackground(call_id, dataNames, queryParams) {
       responseData.analysis_response.file_url = dummyDataPool.gmach_data.file_url || "https://example.com/default_file_url.wav";
     }
     
-    // Add user_content if provided
+    // Add user_content - always include all data from resultData concatenated
     if (queryParams.user_content) {
       responseData.analysis_response.user_content = queryParams.user_content;
+    } else {
+      // משרשר את כל הנתונים מתוך resultData
+      const allValues = Object.values(resultData).filter(value => value !== null && value !== undefined && value !== '');
+      responseData.analysis_response.user_content = allValues.join(' ');
     }
     
     const delayMs = calculateDelay(responseData);
